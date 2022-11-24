@@ -1,0 +1,42 @@
+
+// Each #kernel tells which function to compile; you can have many kernels
+#pragma kernel CSMain
+
+
+RWStructuredBuffer<float>input;
+RWStructuredBuffer<float>weight;
+RWStructuredBuffer<float>bias;
+RWStructuredBuffer<float>z;
+RWStructuredBuffer<float>output;
+int inputSize;
+int outputSize;
+
+double Rand(in float2 uv)
+{
+    return (frac(sin(dot(uv, float2(12.9898, 78.233) * 2.0)) * 43758.5453)) * 2 - 1;
+}
+
+int IndexFromXY(int x, int y)
+{
+    return x * inputSize + y ;
+}
+
+float ActivationFunction(float x)
+{    
+    return 1 / (1 + exp(-x));
+}
+
+[numthreads(8,8,1)]
+void CSMain (uint3 id : SV_DispatchThreadID)
+{
+    if ( id.y > outputSize - 1)
+    {
+        return;
+    }
+    z[id.y] = bias[id.y];
+    for (int i = 0; i < inputSize; ++i)
+    {
+        z[id.y] += input[i]*weight[IndexFromXY(i,id.y)];
+    }
+    output[id.y] =ActivationFunction(z[id.y]);
+}

@@ -1,0 +1,108 @@
+// Each #kernel tells which function to compile; you can have many kernels
+#pragma kernel CSMain
+
+// Create a RenderTexture with enableRandomWrite flag and set it
+// with cs.SetTexture
+RWStructuredBuffer<float>features;
+int featureSize;
+
+RWStructuredBuffer<float>weightA;
+RWStructuredBuffer<float>biasA;
+RWStructuredBuffer<float>zA;
+RWStructuredBuffer<float>activationA;
+RWStructuredBuffer<float>errorA;
+int sizeA;
+
+RWStructuredBuffer<float>weightB;
+RWStructuredBuffer<float>biasB;
+RWStructuredBuffer<float>zB;
+RWStructuredBuffer<float>activationB;
+RWStructuredBuffer<float>errorB;
+int sizeB;
+
+RWStructuredBuffer<float>weightC;
+RWStructuredBuffer<float>biasC;
+RWStructuredBuffer<float>zC;
+RWStructuredBuffer<float>activationC;
+RWStructuredBuffer<float>errorC;
+int sizeC;
+
+RWStructuredBuffer<float>weightD;
+RWStructuredBuffer<float>biasD;
+RWStructuredBuffer<float>zD;
+RWStructuredBuffer<float>activationD;
+RWStructuredBuffer<float>errorD;
+int sizeLabel;
+
+RWStructuredBuffer<float>label;
+
+
+float Z(RWStructuredBuffer<float> input,int inputSize, RWStructuredBuffer<float> w,int nodeIndex, float b)
+{
+    float outp = 0;
+    for (int i = 0; i < inputSize; i++)
+    {
+        outp += input[i]* w[i+nodeIndex*inputSize];
+    }
+    return outp + b;
+}
+
+float ActivationFunction(float x)
+{    
+    return 1 / (1 + exp(-x));
+}
+
+float CostDerivative(float predictedOutput, float expectedOutput)
+{
+    if (predictedOutput == 0 || predictedOutput == 1)
+    {
+        return 0;
+    }
+    return (-predictedOutput + expectedOutput) / (predictedOutput * (predictedOutput - 1));
+}
+
+float ActivationDerivative(float input)
+{
+    float a = ActivationFunction(input);
+    return a * (1 - a);
+}
+
+[numthreads(8,8,1)]
+void CSMain (uint3 id : SV_DispatchThreadID)
+{
+    
+    for (int i = 0; i < sizeA; i++)
+    {
+        zA[i] = Z(features,featureSize, weightA,i, biasA[i]);
+        activationA[i] = ActivationFunction(zA[i]);
+    }
+    for (int i = 0; i < sizeB; i++)
+    {
+        zB[i] = Z(activationA,sizeA, weightB,i, biasB[i]);
+        activationB[i] = ActivationFunction(zB[i]);
+    }
+    for (int i = 0; i < sizeC; i++)
+    {
+        zC[i] = Z(activationB,sizeB, weightC,i, biasC[i]);
+        activationC[i] = ActivationFunction(zC[i]);
+    }
+    for (int i = 0; i < sizeLabel; i++)
+    {
+        zD[i] = Z(activationC,sizeC, weightD,i, biasD[i]);
+        activationD[i] = ActivationFunction(zD[i]);
+    }
+    /*
+    for (int i = 0; i < sizeLabel; i++)
+    {
+        float costDerivative = CostDerivative(activationD[i], label[i]);
+        errors[i] = costDerivative * ActivationDerivative(outputLayer.activation[i]);
+
+        float errorOnNodeI = errors[i] * learnrate;
+        outputLayer.bias[i] -= errorOnNodeI;
+        for (int j = 0; j < activations[1].Length; j++)
+        {
+            outputLayer.weight[i][j] -= errorOnNodeI * activations[1][j];
+        }
+    }*/
+    
+}
