@@ -27,7 +27,7 @@ public class MoreDNet : ScriptableObject
     public int outputSize;
     public int biasCount;
     public int weightCount;
-
+    [SerializeField] private double regularization;
 
 
     public struct FeedForwardJob : IJobParallelFor
@@ -397,13 +397,14 @@ public class MoreDNet : ScriptableObject
 
     public void UpdateDelta(SimpleLayer layer,double[] nextLayerActivation)
     {
+        double weightDecay = (1 - regularization * learnrate);
         for (int i = 0; i < layer.activation.Length; i++)
         {
             double errorOnNodeI = layer.errors[i] * learnrate;
             layer.bDelta[i] += errorOnNodeI;
             for (int j = 0; j < nextLayerActivation.Length; j++)
             {
-                layer.wDelta[i * nextLayerActivation.Length + j] += errorOnNodeI * nextLayerActivation[j];
+                layer.wDelta[i * nextLayerActivation.Length + j] += errorOnNodeI * nextLayerActivation[j]*weightDecay;
             }
             layer.errors[i] = 0;
         }
